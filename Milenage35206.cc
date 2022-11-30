@@ -2,10 +2,10 @@
 #include "Milenage35206.h"
 
 
-void Milenage35206 :: f1    ( const uint8_t rand[16],
-                         const uint8_t sqn[6],
-                         const uint8_t amf[2], 
-                         uint8_t mac_a[8] )
+void Milenage35206 :: f1    ( const RAND_t rand,
+                              const SQN_t sqn,
+                              const AMF_t amf,
+                              MAC_t mac_a )
 {
   uint8_t temp[16];
   uint8_t in1[16];
@@ -46,16 +46,21 @@ void Milenage35206 :: f1    ( const uint8_t rand[16],
     mac_a[i] = out1[i];
 }
 
-void Milenage35206 :: f2345 ( const uint8_t rand[16],
-                         uint8_t res[8],
-                         uint8_t ck[16],
-                         uint8_t ik[16],
-                         uint8_t ak[6] )
+bool Milenage35206 :: f2345 ( const RAND_t rand,
+                              RES16_t res,
+                              size_t *res_len,
+                              KEY_t   ck,
+                              KEY_t   ik,
+                              AK_t    ak )
 {
   uint8_t temp[16];
   uint8_t out[16];
   uint8_t rijndaelInput[16];
   uint8_t i;
+
+  if (*res_len < RES_LEN)
+    return false;
+  *res_len = RES_LEN;
 
   for (i=0; i<16; i++)
     rijndaelInput[i] = rand[i] ^ op_c[i];
@@ -107,14 +112,16 @@ void Milenage35206 :: f2345 ( const uint8_t rand[16],
 
   for (i=0; i<16; i++)
     ik[i] = out[i];
+
+  return true;
 }
 
 
   
-void Milenage35206 :: f1star( const uint8_t rand[16],
-                         const uint8_t sqn[6],
-                         const uint8_t amf[2], 
-                         uint8_t mac_s[8] )
+void Milenage35206 :: f1star( const RAND_t rand,
+                              const SQN_t  sqn,
+                              const AMF_t  amf,
+                              MAC_t   mac_s )
 {
   uint8_t temp[16];
   uint8_t in1[16];
@@ -158,8 +165,8 @@ void Milenage35206 :: f1star( const uint8_t rand[16],
 
   
 
-void Milenage35206 :: f5star( const uint8_t rand[16],
-                         uint8_t ak[6] )
+void Milenage35206 :: f5star( const RAND_t rand,
+                              AK_t   ak )
 {
   uint8_t temp[16];
   uint8_t out[16];

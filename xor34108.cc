@@ -12,10 +12,10 @@
 // obtain the XMAC/MAC, RES/XRES, CK, IK, Kc and AK respectively, to be
 // used in the authentication and key agreement procedure.
 
-void Xor34108 :: f1( const uint8_t rand[16],
-                     const uint8_t sqn[6],
-                     const uint8_t amf[2],
-                     uint8_t mac_a[8] )
+void Xor34108 :: f1    ( const RAND_t rand,
+                         const SQN_t sqn,
+                         const AMF_t amf,
+                         MAC_t mac_a )
 {
 // XDOUT[0..127] = K[0..127] XOR RAND[0..127]
 // CDOUT[0..63] = SQN[0..47] || AMF[0..15]
@@ -30,19 +30,24 @@ void Xor34108 :: f1( const uint8_t rand[16],
     do_xor(mac_a + 6, xdout + 6, amf, 2);
 }
 
-void Xor34108 :: f2345 ( const uint8_t rand[16],
-                         uint8_t res[8],
-                         uint8_t ck[16],
-                         uint8_t ik[16],
-                         uint8_t ak[6] )
+bool Xor34108 :: f2345 ( const RAND_t rand,
+                         RES16_t res,
+                         size_t *res_len,
+                         KEY_t   ck,
+                         KEY_t   ik,
+                         AK_t    ak )
 {
     uint8_t xdout[16], cdout[8];
+
+    if (*res_len < RES_LEN)
+        return false;
+    *res_len = RES_LEN;
 
 // XDOUT[0..127] = K[0..127] XOR RAND[0..127]
     do_xor(xdout, k, rand, 16);
 
-// RES[0..63] = f2(XDOUT,n) = XDOUT[0..63]
-    memcpy(res, xdout, 8);
+// RES[0..127] = f2(XDOUT,n) = XDOUT[0..63]
+    memcpy(res, xdout, RES_LEN);
 
 // CK[0..127] = f3(XDOUT) = XDOUT[8..127,0..7]
     memcpy(ck, xdout+1, 15);
@@ -58,6 +63,8 @@ void Xor34108 :: f2345 ( const uint8_t rand[16],
 // NOTE : for GSM,
 // Kc[0..63] = c3(CK,IK), see 3GPP TS 33.102 [24], clause 6.8.1.2.
 // but not implemented here.
+
+    return true;
 }
 
 // 8.1.2.2 Generation of re-synchronization parameters in the USIM
@@ -70,10 +77,10 @@ void Xor34108 :: f2345 ( const uint8_t rand[16],
 // and AK have to be calculated using the functions f1* and f5*, which in
 // the test algorithm are identical to f1 and f5, respectively.
 
-void Xor34108 :: f1star( const uint8_t rand[16],
-                         const uint8_t sqn[6],
-                         const uint8_t amf[2],
-                         uint8_t mac_s[8] )
+void Xor34108 :: f1star( const RAND_t rand,
+                         const SQN_t  sqn,
+                         const AMF_t  amf,
+                         MAC_t   mac_s )
 {
     uint8_t xdout[16];
 
@@ -87,8 +94,8 @@ void Xor34108 :: f1star( const uint8_t rand[16],
     do_xor(mac_s + 6, xdout + 6, amf, 2);
 }
 
-void Xor34108 :: f5star( const uint8_t rand[16],
-                         uint8_t ak[6] )
+void Xor34108 :: f5star( const RAND_t rand,
+                         AK_t   ak )
 {
     uint8_t xdout[16], cdout[8];
 

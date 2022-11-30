@@ -1,13 +1,17 @@
 
-#include <inttypes.h>
-#include <string.h>
+#ifndef __XOR_34_108_H__
+#define __XOR_34_108_H__
+
+#include "auth-alg-base.h"
 
 // 3GPP TS 34.108 15.2.0 s07-s08
 
-class Xor34108
+class Xor34108 : public AuthAlgBase
 {
-    uint8_t k[16];
+public:
+    static const size_t RES_LEN = 16;
 
+private:
     static void do_xor(uint8_t *dest,
                        const uint8_t *src1,
                        const uint8_t *src2,
@@ -19,29 +23,24 @@ class Xor34108
     }
 
 public:
-
-    Xor34108( uint8_t _k[16] )
-    {
-        memcpy(k, _k, 16);
-    }
-
-    void f1    ( const uint8_t rand[16],
-                 const uint8_t sqn[6],
-                 const uint8_t amf[2], 
-                 uint8_t mac_a[8] );
-
-    void f2345 ( const uint8_t rand[16],
-                 uint8_t res[8],
-                 uint8_t ck[16],
-                 uint8_t ik[16],
-                 uint8_t ak[6] );
-
-    void f1star( const uint8_t rand[16],
-                 const uint8_t sqn[6],
-                 const uint8_t amf[2], 
-                 uint8_t mac_s[8] );
-
-    void f5star( const uint8_t rand[16],
-                 uint8_t ak[6] );
+    Xor34108( RAND_t _k ) : AuthAlgBase( _k ) { }
+    void f1    ( const RAND_t rand,
+                 const SQN_t sqn,
+                 const AMF_t amf,
+                 MAC_t mac_a );
+    bool f2345 ( const RAND_t rand,
+                 RES16_t res,
+                 size_t *res_len,
+                 KEY_t   ck,
+                 KEY_t   ik,
+                 AK_t    ak);
+    void f1star( const RAND_t rand,
+                 const SQN_t  sqn,
+                 const AMF_t  amf,
+                 MAC_t   mac_s );
+    void f5star( const RAND_t rand,
+                 AK_t   ak );
 
 };
+
+#endif /* __XOR_34_108_H__ */
