@@ -10,13 +10,21 @@ class AuthAlgBase {
 public:
     typedef uint8_t K_t[16];
     typedef uint8_t RAND_t[16];
+    // AUTN : SQN^AK  ||  AMF  ||  MAC_A
     typedef uint8_t AUTN_t[16];
+    // AUTS : SQN^AK  ||  MAC_S   (AMF assumed to be 0)
     typedef uint8_t AUTS_t[14];
     typedef uint8_t SQN_t[6];
     typedef SQN_t AK_t;
     typedef uint8_t AMF_t[2];
     typedef uint8_t MAC_t[8];
+    // requires a size_t with it to determine if RES
+    // is supposed to be 8 or 16 bytes.
     typedef uint8_t RES16_t[16];
+    // technically to support GSM, there should be a length with this
+    // too, since Kc is 8 bytes; but at the moment this does not
+    // support GSM, only UMTS, LTE, and 5G; so CK and IK are always 16
+    // bytes.
     typedef uint8_t KEY_t[16];
 
 protected:
@@ -95,6 +103,31 @@ public:
     virtual void f5star( const RAND_t rand,
                          AK_t   ak )        = 0;
 
+/* authenticate RAND & AUTN, and calculate parameters.
+   returns true if AUTN passes, or false if not. */
+    bool authenticate( const RAND_t rand,
+                       const AUTN_t autn,
+                       AK_t ak,
+                       SQN_t sqn,
+                       AMF_t amf,
+                       MAC_t mac_a,
+                       RES16_t res,
+                       size_t  *res_len,
+                       KEY_t  ck,
+                       KEY_t  ik);
+
+/* authenticate RAND & AUTS, and calculate parameters.
+   returns true if AUTS passes, or false if not.
+   note AMF is 0x00 0x00 in this case. */
+    bool authenticate_s( const RAND_t rand,
+                         const AUTS_t auts,
+                         AK_t ak,
+                         SQN_t sqn,
+                         MAC_t mac_s,
+                         RES16_t res,
+                         size_t  *res_len,
+                         KEY_t  ck,
+                         KEY_t  ik);
 
 /* make AUTN out of AK, SQN, AMF, and MAC-A */
     static inline void make_autn( const AK_t ak,

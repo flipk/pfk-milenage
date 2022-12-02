@@ -6,7 +6,11 @@ OBJDIR = obj
 LIB_TARGETS += milenage
 
 milenage_TARGET = $(OBJDIR)/libmilenage.a
-milenage_CXXSRCS = Rijndael.cc Milenage35206.cc xor34108.cc
+milenage_CXXSRCS = \
+	Rijndael.cc \
+	Milenage35206.cc \
+	xor34108.cc \
+	auth-alg-base.cc
 
 # --- test program for milenage
 

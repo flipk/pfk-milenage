@@ -116,8 +116,7 @@ bool Milenage35206 :: f2345 ( const RAND_t rand,
   return true;
 }
 
-
-  
+// XXX : i think amf is supposed to be 0 for f1* right?
 void Milenage35206 :: f1star( const RAND_t rand,
                               const SQN_t  sqn,
                               const AMF_t  amf,
