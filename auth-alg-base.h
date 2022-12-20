@@ -4,6 +4,8 @@
 
 #include <inttypes.h>
 #include <string.h>
+#include <string>
+#include <mbedtls/md.h>
 
 class AuthAlgBase {
 
@@ -26,15 +28,16 @@ public:
     // support GSM, only UMTS, LTE, and 5G; so CK and IK are always 16
     // bytes.
     typedef uint8_t KEY_t[16];
+    // 5G-specific
+    typedef uint8_t  KAUSF_t[32];
+    typedef uint8_t  RESstar_t[16];
 
 protected:
     K_t  k;
 
 public:
-    AuthAlgBase( K_t _k )
-    {
-        memcpy(k, _k, sizeof(k));
-    }
+    AuthAlgBase( K_t _k );
+    virtual ~AuthAlgBase(void);
 
 /*-------------------------------------------------------------------
  *                            Algorithm f1
@@ -103,7 +106,35 @@ public:
     virtual void f5star( const RAND_t rand,
                          AK_t   ak )        = 0;
 
-/* authenticate RAND & AUTN, and calculate parameters.
+/* the network performs this operation prior to starting an auth cycle.
+   take a RAND and SQN and generate AUTN and other params. */
+    bool generate( const RAND_t rand,
+                   const SQN_t sqn,
+                   AK_t ak,
+                   AMF_t amf,
+                   MAC_t mac_a,
+                   RES16_t res,
+                   size_t *res_len,
+                   KEY_t ck,
+                   KEY_t ik,
+                   AUTN_t autn );
+
+/* the mobile performs this operation if it receives a RAND&AUTN
+   and the MAC-A matches but the SQN is wrong.  take a RAND and
+   correct SQN and generate AUTS and other params. */
+    bool generate_s( const RAND_t rand,
+                     const SQN_t sqn,
+                     AK_t akstar,
+                     AMF_t amfstar,
+                     MAC_t mac_s,
+                     RES16_t res,
+                     size_t *res_len,
+                     KEY_t ck,
+                     KEY_t ik,
+                     AUTS_t auts );
+
+/* the mobile performs this operation upon receipt of RAND&AUTN.
+   authenticate RAND & AUTN, and calculate parameters.
    returns true if AUTN passes, or false if not. */
     bool authenticate( const RAND_t rand,
                        const AUTN_t autn,
@@ -116,7 +147,8 @@ public:
                        KEY_t  ck,
                        KEY_t  ik);
 
-/* authenticate RAND & AUTS, and calculate parameters.
+/* the network performs this operation upon receipt of AUTS from mobile.
+   authenticate RAND & AUTS, and calculate parameters.
    returns true if AUTS passes, or false if not.
    note AMF is 0x00 0x00 in this case. */
     bool authenticate_s( const RAND_t rand,
@@ -154,6 +186,60 @@ public:
             autn[0 + i] = ak[i] ^ sqn[i];
         memcpy(autn + 6, mac_s, 8);
     }
+
+private:
+    mbedtls_md_context_t   ctx;
+
+    typedef uint8_t FC_t;
+    struct param {
+        const uint8_t *buf;
+        uint16_t len;
+        param(void) { buf = NULL; len = 0; }
+    };
+    struct params_t {
+        static const int MAX_PARAMS = 16;
+        param params[16];
+        int count;
+        params_t(void) {
+            count = 0;
+        }
+        bool add(const uint8_t *b, uint16_t l) {
+            if (count >= MAX_PARAMS)
+                return false;
+            params[count].buf = b;
+            params[count].len = l;
+            count++;
+        }
+    };
+
+    typedef uint8_t KDF_t[32]; // SHA256 HMAC output
+    /* TS 33.220 section B.2.0 */
+    void kdf_common(const AuthAlgBase::KEY_t ck,
+                    const AuthAlgBase::KEY_t ik,
+                    const params_t  &params,
+                    FC_t  fc,  KDF_t output);
+
+    // first byte hashed is the cost factor (FC).
+    static const FC_t  fc_res_star_derivation = 0x6B;
+    static const FC_t  fc_kausf_derivation = 0x6A;
+
+public:
+    /* TS 33.501 section A.2 */
+    void kdf_kausf(const AuthAlgBase::KEY_t ck,
+                   const AuthAlgBase::KEY_t ik,
+                   const std::string &sn_name,
+                   const AuthAlgBase::AUTN_t  autn,
+                   KAUSF_t  kausf);
+
+    /* TS 33.501 section A.4 */
+    void kdf_resstar(const AuthAlgBase::KEY_t ck,
+                     const AuthAlgBase::KEY_t ik,
+                     const std::string &sn_name,
+                     const AuthAlgBase::RAND_t  rand,
+                     const AuthAlgBase::RES16_t res,
+                     size_t reslen,
+                     RESstar_t  resStar,
+                     size_t &resStarlen);
 
 };
 

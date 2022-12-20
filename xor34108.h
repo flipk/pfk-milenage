@@ -24,6 +24,8 @@ private:
 
 public:
     Xor34108( RAND_t _k ) : AuthAlgBase( _k ) { }
+    virtual ~Xor34108(void) { }
+
     void f1    ( const RAND_t rand,
                  const SQN_t sqn,
                  const AMF_t amf,

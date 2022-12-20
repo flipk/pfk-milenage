@@ -49,6 +49,7 @@ public:
     {
         memcpy(op_c, _op_c, sizeof(op_c));
     }
+    virtual ~Milenage35206(void) { }
 
     inline void get_opc( uint8_t  _op_c[16] )
     {
