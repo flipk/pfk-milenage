@@ -203,12 +203,12 @@ private:
         params_t(void) {
             count = 0;
         }
-        bool add(const uint8_t *b, uint16_t l) {
-            if (count >= MAX_PARAMS)
-                return false;
-            params[count].buf = b;
-            params[count].len = l;
-            count++;
+        void add(const uint8_t *b, uint16_t l) {
+            if (count < MAX_PARAMS) {
+                params[count].buf = b;
+                params[count].len = l;
+                count++;
+            }
         }
     };
 
