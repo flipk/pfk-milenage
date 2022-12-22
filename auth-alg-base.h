@@ -169,22 +169,23 @@ public:
                                   AUTN_t autn )
     {
         uint8_t i;
-        for (i=0; i < 6; i++)
+        for (i=0; i < sizeof(AK_t); i++)
             autn[0 + i] = ak[i] ^ sqn[i];
-        memcpy(autn + 6, amf, 2);
-        memcpy(autn + 8, mac_a, 8);
+        memcpy(autn + sizeof(AK_t), amf, 2);
+        memcpy(autn + sizeof(AK_t) + sizeof(AMF_t),
+               mac_a, sizeof(MAC_t));
     }
 
 /* make AUTS out of AK, SQN, and MAC-S */
     static inline void make_auts( const AK_t ak,
                                   const SQN_t sqn,
                                   const MAC_t mac_s,
-                                  AUTS_t autn )
+                                  AUTS_t auts )
     {
         uint8_t i;
-        for (i=0; i < 6; i++)
-            autn[0 + i] = ak[i] ^ sqn[i];
-        memcpy(autn + 6, mac_s, 8);
+        for (i=0; i < sizeof(AK_t); i++)
+            auts[0 + i] = ak[i] ^ sqn[i];
+        memcpy(auts + sizeof(AK_t), mac_s, sizeof(MAC_t));
     }
 
 private:

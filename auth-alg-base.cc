@@ -104,16 +104,10 @@ bool AuthAlgBase :: generate( const RAND_t rand,
 
     amf[0] = 0x80;
     amf[1] = 0x00;
+
     f1(rand, sqn, amf, mac_a);
 
-    for (ind = 0; ind < sizeof(SQN_t); ind++)
-        autn[ind] = sqn[ind] ^ ak[ind];
-
-    amf[0] = autn[sizeof(SQN_t)] = 0x80;
-    amf[1] = autn[sizeof(SQN_t)+1] = 0x00;
-
-    memcpy(autn + sizeof(SQN_t) + sizeof(AMF_t),
-           mac_a, sizeof(MAC_t));
+    make_autn(ak, sqn, amf, mac_a, autn);
 
     return true;
 }
@@ -138,14 +132,12 @@ bool AuthAlgBase :: generate_s( const RAND_t rand,
     // ...right here.
     f5star(rand, akstar);
 
-    for (ind = 0; ind < sizeof(SQN_t); ind++)
-        auts[ind] = sqn[ind] ^ akstar[ind];
-
     amfstar[0] = 0x00;
     amfstar[1] = 0x00;
 
     f1star(rand, sqn, amfstar, mac_s);
-    memcpy(auts + sizeof(SQN_t), mac_s, sizeof(MAC_t));
+
+    make_auts(akstar, sqn, mac_s, auts);
 
     return true;
 }
