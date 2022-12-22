@@ -21,7 +21,7 @@
 
 
 #include "auth-alg-base.h"
-#include "Rijndael.h"
+#include <mbedtls/aes.h>
 
 class Milenage35206 : public AuthAlgBase
 {
@@ -32,24 +32,15 @@ public:
     static const size_t RES_LEN = 8;
 
 private:
-    Rijndael rij;
+    // NOTE : the Rijndael algorithm described in 35.206 is,
+    //        literally, AES-128. so use mbedtls.
+    mbedtls_aes_context  ctx;
     OPc_t   op_c;
 
 public:
-    Milenage35206( K_t _k, OP_t   _op )
-        : AuthAlgBase(_k), rij(_k)
-    {
-        uint8_t i;
-        rij.Encrypt( _op, op_c );
-        for (i=0; i<16; i++)
-            op_c[i] ^= _op[i];
-    }
-    Milenage35206( K_t _k, OPc_t  _op_c[16] )
-        : AuthAlgBase(_k), rij(_k)
-    {
-        memcpy(op_c, _op_c, sizeof(op_c));
-    }
-    virtual ~Milenage35206(void) { }
+    Milenage35206( K_t _k, OP_t   _op );
+    Milenage35206( K_t _k, OPc_t  _op_c[16] );
+    virtual ~Milenage35206(void);
 
     inline void get_opc( uint8_t  _op_c[16] )
     {

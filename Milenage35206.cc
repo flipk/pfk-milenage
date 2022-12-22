@@ -1,6 +1,33 @@
 
 #include "Milenage35206.h"
 
+#define rijEncrypt(in, out) \
+    mbedtls_aes_crypt_ecb( &ctx, MBEDTLS_AES_ENCRYPT, in, out )
+
+Milenage35206 :: Milenage35206( K_t _k, OP_t   _op )
+    : AuthAlgBase(_k)
+{
+    uint8_t i;
+    mbedtls_aes_init( &ctx );
+    mbedtls_aes_setkey_enc( &ctx, k, sizeof(k) * 8 );
+    rijEncrypt(_op, op_c);
+    for (i=0; i<16; i++)
+        op_c[i] ^= _op[i];
+}
+
+Milenage35206 :: Milenage35206( K_t _k, OPc_t  _op_c[16] )
+    : AuthAlgBase(_k)
+{
+    mbedtls_aes_init( &ctx );
+    mbedtls_aes_setkey_enc( &ctx, k, sizeof(k) * 8 );
+    memcpy(op_c, _op_c, sizeof(op_c));
+}
+
+//virtual
+Milenage35206 :: ~Milenage35206(void)
+{
+    mbedtls_aes_free( &ctx );
+}
 
 void Milenage35206 :: f1    ( const RAND_t rand,
                               const SQN_t sqn,
@@ -15,7 +42,7 @@ void Milenage35206 :: f1    ( const RAND_t rand,
 
   for (i=0; i<16; i++)
     rijndaelInput[i] = rand[i] ^ op_c[i];
-  rij.Encrypt( rijndaelInput, temp );
+  rijEncrypt( rijndaelInput, temp );
 
   for (i=0; i<6; i++)
   {
@@ -39,7 +66,7 @@ void Milenage35206 :: f1    ( const RAND_t rand,
   for (i=0; i<16; i++)
     rijndaelInput[i] ^= temp[i];
   
-  rij.Encrypt( rijndaelInput, out1 );
+  rijEncrypt( rijndaelInput, out1 );
   for (i=0; i<16; i++)
     out1[i] ^= op_c[i];
   for (i=0; i<8; i++)
@@ -64,7 +91,7 @@ bool Milenage35206 :: f2345 ( const RAND_t rand,
 
   for (i=0; i<16; i++)
     rijndaelInput[i] = rand[i] ^ op_c[i];
-  rij.Encrypt( rijndaelInput, temp );
+  rijEncrypt( rijndaelInput, temp );
 
   /* To obtain output block OUT2: XOR OPc and TEMP,    *
    * rotate by r2=0, and XOR on the constant c2 (which *
@@ -74,7 +101,7 @@ bool Milenage35206 :: f2345 ( const RAND_t rand,
     rijndaelInput[i] = temp[i] ^ op_c[i];
   rijndaelInput[15] ^= 1;
 
-  rij.Encrypt( rijndaelInput, out );
+  rijEncrypt( rijndaelInput, out );
   for (i=0; i<16; i++)
     out[i] ^= op_c[i];
 
@@ -91,7 +118,7 @@ bool Milenage35206 :: f2345 ( const RAND_t rand,
     rijndaelInput[(i+12) % 16] = temp[i] ^ op_c[i];
   rijndaelInput[15] ^= 2;
 
-  rij.Encrypt( rijndaelInput, out );
+  rijEncrypt( rijndaelInput, out );
   for (i=0; i<16; i++)
     out[i] ^= op_c[i];
 
@@ -106,7 +133,7 @@ bool Milenage35206 :: f2345 ( const RAND_t rand,
     rijndaelInput[(i+8) % 16] = temp[i] ^ op_c[i];
   rijndaelInput[15] ^= 4;
 
-  rij.Encrypt( rijndaelInput, out );
+  rijEncrypt( rijndaelInput, out );
   for (i=0; i<16; i++)
     out[i] ^= op_c[i];
 
@@ -116,7 +143,6 @@ bool Milenage35206 :: f2345 ( const RAND_t rand,
   return true;
 }
 
-// XXX : i think amf is supposed to be 0 for f1* right?
 void Milenage35206 :: f1star( const RAND_t rand,
                               const SQN_t  sqn,
                               const AMF_t  amf,
@@ -130,7 +156,7 @@ void Milenage35206 :: f1star( const RAND_t rand,
 
   for (i=0; i<16; i++)
     rijndaelInput[i] = rand[i] ^ op_c[i];
-  rij.Encrypt( rijndaelInput, temp );
+  rijEncrypt( rijndaelInput, temp );
 
   for (i=0; i<6; i++)
   {
@@ -154,15 +180,13 @@ void Milenage35206 :: f1star( const RAND_t rand,
   for (i=0; i<16; i++)
     rijndaelInput[i] ^= temp[i];
   
-  rij.Encrypt( rijndaelInput, out1 );
+  rijEncrypt( rijndaelInput, out1 );
   for (i=0; i<16; i++)
     out1[i] ^= op_c[i];
 
   for (i=0; i<8; i++)
     mac_s[i] = out1[i+8];
 }
-
-  
 
 void Milenage35206 :: f5star( const RAND_t rand,
                               AK_t   ak )
@@ -174,7 +198,7 @@ void Milenage35206 :: f5star( const RAND_t rand,
 
   for (i=0; i<16; i++)
     rijndaelInput[i] = rand[i] ^ op_c[i];
-  rij.Encrypt( rijndaelInput, temp );
+  rijEncrypt( rijndaelInput, temp );
 
   /* To obtain output block OUT5: XOR OPc and TEMP,         *
    * rotate by r5=96, and XOR on the constant c5 (which     *
@@ -184,7 +208,7 @@ void Milenage35206 :: f5star( const RAND_t rand,
     rijndaelInput[(i+4) % 16] = temp[i] ^ op_c[i];
   rijndaelInput[15] ^= 8;
 
-  rij.Encrypt( rijndaelInput, out );
+  rijEncrypt( rijndaelInput, out );
   for (i=0; i<16; i++)
     out[i] ^= op_c[i];
 
