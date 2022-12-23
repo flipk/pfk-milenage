@@ -25,7 +25,7 @@ AuthAlgBase :: ~AuthAlgBase(void)
 }
 
 bool AuthAlgBase :: authenticate( const RAND_t rand,
-                                  const AUTN_t autn,
+                                  const AUTN_t &autn,
                                   AK_t ak,
                                   SQN_t sqn,
                                   AMF_t amf,
@@ -40,22 +40,17 @@ bool AuthAlgBase :: authenticate( const RAND_t rand,
     if (f2345(rand, res, res_len, ck, ik, ak) == false)
         return false;
 
-    for (ind = 0; ind < sizeof(SQN_t); ind++)
-        sqn[ind] = autn[ind] ^ ak[ind];
-    amf[0] = autn[sizeof(SQN_t)];
-    amf[1] = autn[sizeof(SQN_t)+1];
+    autn.get_sqn(ak, sqn);
+    autn.get_amf(amf);
 
     f1(rand, sqn, amf, mac_a);
-    if (memcmp(autn + sizeof(SQN_t) + sizeof(AMF_t),
-               mac_a, sizeof(MAC_t)) == 0)
-        return true;
 
-    return false;
+    return autn.validate_mac(mac_a);
 }
 
 
 bool AuthAlgBase :: authenticate_s( const RAND_t rand,
-                                    const AUTS_t auts,
+                                    const AUTS_t &auts,
                                     AK_t akstar,
                                     SQN_t sqn,
                                     MAC_t mac_s,
@@ -74,16 +69,12 @@ bool AuthAlgBase :: authenticate_s( const RAND_t rand,
     // ...right here.
     f5star(rand, akstar);
 
-    for (ind = 0; ind < sizeof(SQN_t); ind++)
-        sqn[ind] = auts[ind] ^ akstar[ind];
+    auts.get_sqn(akstar, sqn);
     amfstar[0] = 0;
     amfstar[1] = 0;
 
     f1star(rand, sqn, amfstar, mac_s);
-    if (memcmp(auts + sizeof(SQN_t), mac_s, sizeof(MAC_t)) == 0)
-        return true;
-
-    return false;
+    return auts.validate_mac(mac_s);
 }
 
 bool AuthAlgBase :: generate( const RAND_t rand,
@@ -95,7 +86,7 @@ bool AuthAlgBase :: generate( const RAND_t rand,
                               size_t *res_len,
                               KEY_t ck,
                               KEY_t ik,
-                              AUTN_t autn )
+                              AUTN_t &autn )
 {
     int ind;
 
@@ -107,7 +98,9 @@ bool AuthAlgBase :: generate( const RAND_t rand,
 
     f1(rand, sqn, amf, mac_a);
 
-    make_autn(ak, sqn, amf, mac_a, autn);
+    autn.set_sqn(ak, sqn);
+    autn.set_amf(amf);
+    autn.set_mac(mac_a);
 
     return true;
 }
@@ -121,7 +114,7 @@ bool AuthAlgBase :: generate_s( const RAND_t rand,
                                 size_t *res_len,
                                 KEY_t ck,
                                 KEY_t ik,
-                                AUTS_t auts )
+                                AUTS_t &auts )
 {
     int ind;
 
@@ -137,7 +130,8 @@ bool AuthAlgBase :: generate_s( const RAND_t rand,
 
     f1star(rand, sqn, amfstar, mac_s);
 
-    make_auts(akstar, sqn, mac_s, auts);
+    auts.set_sqn(akstar, sqn);
+    auts.set_mac(mac_s);
 
     return true;
 }

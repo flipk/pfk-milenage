@@ -12,10 +12,6 @@ class AuthAlgBase {
 public:
     typedef uint8_t K_t[16];
     typedef uint8_t RAND_t[16];
-    // AUTN : SQN^AK  ||  AMF  ||  MAC_A
-    typedef uint8_t AUTN_t[16];
-    // AUTS : SQN^AK  ||  MAC_S   (AMF assumed to be 0)
-    typedef uint8_t AUTS_t[14];
     typedef uint8_t SQN_t[6];
     typedef SQN_t AK_t;
     typedef uint8_t AMF_t[2];
@@ -31,6 +27,73 @@ public:
     // 5G-specific
     typedef uint8_t  KAUSF_t[32];
     typedef uint8_t  RESstar_t[16];
+
+    struct AUTN_t {
+        // AUTN : SQN^AK  ||  AMF  ||  MAC_A
+        static const int SIZE = 16;
+        static const int SQNAK_OFFSET = 0;
+        static const int AMF_OFFSET = sizeof(SQN_t);
+        static const int MAC_OFFSET = AMF_OFFSET + sizeof(AMF_t);
+
+        uint8_t  autn[SIZE];
+
+        void get_sqnak(SQN_t sqnak) const {
+            for (int ind = 0; ind < sizeof(SQN_t); ind++)
+                sqnak[ind] = autn[SQNAK_OFFSET+ind];
+        }
+        void get_sqn(const AK_t ak, SQN_t sqn) const {
+            for (int ind = 0; ind < sizeof(SQN_t); ind++)
+                sqn[ind] = autn[SQNAK_OFFSET+ind] ^ ak[ind];
+        }
+        void set_sqn(const AK_t ak, const SQN_t sqn) {
+            for (int ind = 0; ind < sizeof(SQN_t); ind++)
+                autn[SQNAK_OFFSET + ind] = sqn[ind] ^ ak[ind];
+        }
+        void get_amf(AMF_t  amf) const {
+            for (int ind = 0; ind < sizeof(AMF_t); ind++)
+                amf[ind] = autn[AMF_OFFSET + ind];
+        }
+        void set_amf(const AMF_t amf) {
+            for (int ind = 0; ind < sizeof(AMF_t); ind++)
+                autn[AMF_OFFSET + ind] = amf[ind];
+        }
+        void set_mac(const MAC_t mac_a) {
+            for (int ind = 0; ind < sizeof(MAC_t); ind++)
+                autn[MAC_OFFSET + ind] = mac_a[ind];
+        }
+        bool validate_mac(const MAC_t mac_a) const {
+            return memcmp(autn + MAC_OFFSET, mac_a, sizeof(MAC_t)) == 0;
+        }
+    };
+
+    struct AUTS_t {
+        // AUTS : SQN^AKSTAR ||  MAC_A
+        static const int SIZE = 14;
+        static const int SQNAK_OFFSET = 0;
+        static const int MAC_OFFSET = sizeof(SQN_t);
+
+        uint8_t  auts[SIZE];
+
+        void get_sqnak(SQN_t sqnak) const {
+            for (int ind = 0; ind < sizeof(SQN_t); ind++)
+                sqnak[ind] = auts[SQNAK_OFFSET+ind];
+        }
+        void get_sqn(const AK_t akstar, SQN_t sqn) const {
+            for (int ind = 0; ind < sizeof(SQN_t); ind++)
+                sqn[ind] = auts[SQNAK_OFFSET+ind] ^ akstar[ind];
+        }
+        void set_sqn(const AK_t ak, const SQN_t sqn) {
+            for (int ind = 0; ind < sizeof(SQN_t); ind++)
+                auts[SQNAK_OFFSET + ind] = sqn[ind] ^ ak[ind];
+        }
+        void set_mac(const MAC_t mac_s) {
+            for (int ind = 0; ind < sizeof(MAC_t); ind++)
+                auts[MAC_OFFSET + ind] = mac_s[ind];
+        }
+        bool validate_mac(const MAC_t mac_s) const {
+            return memcmp(auts + MAC_OFFSET, mac_s, sizeof(MAC_t)) == 0;
+        }
+    };
 
 protected:
     K_t  k;
@@ -117,7 +180,7 @@ public:
                    size_t *res_len,
                    KEY_t ck,
                    KEY_t ik,
-                   AUTN_t autn );
+                   AUTN_t &autn );
 
 /* the mobile performs this operation if it receives a RAND&AUTN
    and the MAC-A matches but the SQN is wrong.  take a RAND and
@@ -131,13 +194,13 @@ public:
                      size_t *res_len,
                      KEY_t ck,
                      KEY_t ik,
-                     AUTS_t auts );
+                     AUTS_t &auts );
 
 /* the mobile performs this operation upon receipt of RAND&AUTN.
    authenticate RAND & AUTN, and calculate parameters.
    returns true if AUTN passes, or false if not. */
     bool authenticate( const RAND_t rand,
-                       const AUTN_t autn,
+                       const AUTN_t &autn,
                        AK_t ak,
                        SQN_t sqn,
                        AMF_t amf,
@@ -152,7 +215,7 @@ public:
    returns true if AUTS passes, or false if not.
    note AMF is 0x00 0x00 in this case. */
     bool authenticate_s( const RAND_t rand,
-                         const AUTS_t auts,
+                         const AUTS_t &auts,
                          AK_t ak,
                          SQN_t sqn,
                          MAC_t mac_s,
@@ -160,33 +223,6 @@ public:
                          size_t  *res_len,
                          KEY_t  ck,
                          KEY_t  ik);
-
-/* make AUTN out of AK, SQN, AMF, and MAC-A */
-    static inline void make_autn( const AK_t ak,
-                                  const SQN_t sqn,
-                                  const AMF_t amf,
-                                  const MAC_t mac_a,
-                                  AUTN_t autn )
-    {
-        uint8_t i;
-        for (i=0; i < sizeof(AK_t); i++)
-            autn[0 + i] = ak[i] ^ sqn[i];
-        memcpy(autn + sizeof(AK_t), amf, 2);
-        memcpy(autn + sizeof(AK_t) + sizeof(AMF_t),
-               mac_a, sizeof(MAC_t));
-    }
-
-/* make AUTS out of AK, SQN, and MAC-S */
-    static inline void make_auts( const AK_t ak,
-                                  const SQN_t sqn,
-                                  const MAC_t mac_s,
-                                  AUTS_t auts )
-    {
-        uint8_t i;
-        for (i=0; i < sizeof(AK_t); i++)
-            auts[0 + i] = ak[i] ^ sqn[i];
-        memcpy(auts + sizeof(AK_t), mac_s, sizeof(MAC_t));
-    }
 
 private:
     mbedtls_md_context_t   ctx;
@@ -229,7 +265,7 @@ public:
     void kdf_kausf(const AuthAlgBase::KEY_t ck,
                    const AuthAlgBase::KEY_t ik,
                    const std::string &sn_name,
-                   const AuthAlgBase::AUTN_t  autn,
+                   const AuthAlgBase::AUTN_t &autn,
                    KAUSF_t  kausf);
 
     /* TS 33.501 section A.4 */

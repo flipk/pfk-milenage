@@ -102,7 +102,7 @@ static void test_gen(AuthAlgBase *a,
     PRT(res, res_len);
     PRT(ck, 16);
     PRT(ik, 16);
-    PRT(autn, 16);
+    PRT(autn.autn, 16);
 
     a->kdf_kausf(ck, ik, sn_name, autn, kausf);
     resStarlen = sizeof(resStar);
@@ -125,7 +125,7 @@ static void test_gen(AuthAlgBase *a,
     PRT(res, res_len);
     PRT(ck, 16);
     PRT(ik, 16);
-    PRT(auts, 14);
+    PRT(auts.auts, 14);
 
     a->kdf_kausf(ck, ik, sn_name, autn, kausf);
     resStarlen = sizeof(resStar);
@@ -139,7 +139,7 @@ static void test_gen(AuthAlgBase *a,
 static void test_auth(AuthAlgBase *a,
                       const AuthAlgBase::RAND_t  rand,
                       const AuthAlgBase::AUTN_t  autn,
-                      AuthAlgBase::AUTS_t        auts )
+                      AuthAlgBase::AUTS_t        &auts )
 {
     AuthAlgBase::RES16_t   res;
     size_t                 res_len;
@@ -163,7 +163,7 @@ static void test_auth(AuthAlgBase *a,
         printf("\nERROR: AUTHENTICATION FAILED\n");
     }
 
-    PRT(autn, 16);
+    PRT(autn.autn, 16);
     PRT(ak, 6);
     PRT(sqn, 6);
     PRT(amf, 2);
@@ -187,7 +187,7 @@ static void test_auth(AuthAlgBase *a,
         printf("\nERROR: RESYNC AUTHENTICATION FAILED\n");
     }
 
-    PRT(auts, 14);
+    PRT(auts.auts, 14);
     PRT(akstar, 6);
     PRT(sqn, 6);
     PRT(mac_s, 8);

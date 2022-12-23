@@ -40,14 +40,15 @@ void AuthAlgBase :: kdf_common(const KEY_t ck, const KEY_t ik,
 /* TS33.501 Annex A.2 : Kausf derviation function */
 void AuthAlgBase :: kdf_kausf(const KEY_t ck, const KEY_t ik,
                               const std::string &sn_name,
-                              const AUTN_t  autn,
+                              const AUTN_t  &autn,
                               KAUSF_t  kausf)
 {
     params_t   params;
+    SQN_t      sqnak;
 
     params.add((const uint8_t*) sn_name.c_str(), sn_name.size());
-    // we only need the SQN^AK part of the AUTN.
-    params.add(autn, sizeof(SQN_t));
+    autn.get_sqnak(sqnak);
+    params.add(sqnak, sizeof(SQN_t));
 
     KDF_t kdf_output;
     kdf_common(ck, ik, params, fc_kausf_derivation, kdf_output);
